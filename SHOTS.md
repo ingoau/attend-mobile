@@ -72,12 +72,12 @@ platform is skipped there and noted.
 | 31-scan-more-menu | Scan overflow menu |
 | 32-scan-search | Find an attendee, empty |
 | 33-scan-search-results | Type `ar` |
-| 34-scan-result | Pick the first result (Zoe Edwards, already checked in): result card. Leave the card up. |
+| 34-scan-result | Pick **Arjun Ryan** from the results (not necessarily first): result card. This checks him in. Leave the card up. |
 | 35-scan-participant-sheet | Open their details and unlock (PIN 1234 / Face ID): the participant sheet |
 | 36b-locked | Background the app so it locks again, open details again and cancel the unlock: the locked view |
 | 50-people | People tab |
 | 51-people-filter | Filter and sort sheet |
-| 52-people-filter-2 | Same, scrolled |
+| 52-people-filter-2 | Same, scrolled (skipped on iOS: the sheet fits) |
 | 53-people-attention | Needs-attention quick filter applied. Leave it on; 65/65b show it too. |
 | 54-travel | Travel tab |
 | 55-travel-scrolled | Travel scrolled |
