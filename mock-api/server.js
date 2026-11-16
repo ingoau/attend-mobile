@@ -10,6 +10,12 @@ const http = require('http');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT || 4010);
+// FAKE_NOW (an ISO time) pins the mock's clock, so records created during a
+// run get timestamps that match an app built with the same EXPO_PUBLIC_FAKE_NOW.
+// Time still passes from there.
+const CLOCK_OFFSET = process.env.FAKE_NOW ? Date.parse(process.env.FAKE_NOW) - Date.now() : 0;
+if (Number.isNaN(CLOCK_OFFSET)) throw new Error('FAKE_NOW must be an ISO time');
+const clockNow = () => Date.now() + CLOCK_OFFSET;
 
 // ---------------------------------------------------------------- helpers
 const uuid = (seed) => {
@@ -29,7 +35,7 @@ const pad = (n) => String(n).padStart(2, '0');
 // Local wall time in an offset -> ISO string with that offset.
 const local = (date, time, offset) => `${date}T${time.length === 5 ? time + ':00' : time}${offset}`;
 const toUtc = (iso) => new Date(iso).toISOString();
-const nowIso = () => new Date().toISOString();
+const nowIso = () => new Date(clockNow()).toISOString();
 const addMinutes = (iso, mins, offset) => {
   // keep output in the given offset
   const d = new Date(new Date(iso).getTime() + mins * 60000);
@@ -414,7 +420,7 @@ function addScan(key, p, ctx, scannedAt, source, scannedBy, clientScanId) {
   const s = state[key];
   scanSeq++;
   // created_at gets distinct milliseconds so the cursor always advances
-  const created = new Date(Math.min(new Date(scannedAt).getTime() + 2000, Date.now()) + (scanSeq % 1000)).toISOString();
+  const created = new Date(Math.min(new Date(scannedAt).getTime() + 2000, clockNow()) + (scanSeq % 1000)).toISOString();
   const scan = {
     id: uuid(`scan:${key}:${scanSeq}:${p.participant_event_id}`),
     participant_id: p.participant_id,
@@ -890,7 +896,7 @@ route('POST', '/api/v1/events/:eventId/participants/:pid/notes', async (ctx) => 
   const content = String(ctx.json.content || '').trim();
   if (!content) return [422, { error: 'Content can\'t be blank' }];
   const note = addNote(key, p.participant_event_id, content, USERS[ctx.user], nowIso());
-  note.id = uuid(`note:new:${Date.now()}:${Math.random()}`);
+  note.id = uuid(`note:new:${clockNow()}:${Math.random()}`);
   return [201, { note }];
 });
 route('POST', '/api/v1/events/:eventId/participants/:pid/id_checks', async (ctx) => {
@@ -899,7 +905,7 @@ route('POST', '/api/v1/events/:eventId/participants/:pid/id_checks', async (ctx)
   if (!p) throw httpError(404, 'Participant not found');
   const c = ctx.json.id_check || {};
   const note = addNote(key, p.participant_event_id, `ID check: ${c.outcome || c.result || 'recorded'}`, USERS[ctx.user], nowIso(), { note_type: 'safeguarding', sensitivity: 'restricted' });
-  note.id = uuid(`note:idcheck:${Date.now()}`);
+  note.id = uuid(`note:idcheck:${clockNow()}`);
   return [201, { note_id: note.id }];
 });
 
@@ -1009,15 +1015,15 @@ route('POST', '/api/v1/events/:eventId/incidents', async (ctx) => {
   const now = nowIso();
   const me = USERS[ctx.user];
   const inc = {
-    id: uuid(`incident:new:${Date.now()}:${Math.random()}`), category: 'other', severity: 's2', status: 'open', summary: '', location: null,
+    id: uuid(`incident:new:${clockNow()}:${Math.random()}`), category: 'other', severity: 's2', status: 'open', summary: '', location: null,
     occurred_at: now, created_at: now, reported_by: staffPerson(me), participant_names: [], hq_report: null, details: null, actions_taken: null,
     visible_to_roles: ['event_admin', 'safeguarding_lead'], medication_dispensed: false, medications: [], participants: [], helping_staff: [],
-    timeline: [{ type: 'change', id: uuid(`tl:new:${Date.now()}`), action: 'created', actor_name: me.name, fields: [], created_at: now }],
+    timeline: [{ type: 'change', id: uuid(`tl:new:${clockNow()}`), action: 'created', actor_name: me.name, fields: [], created_at: now }],
     permissions: { update: true, comment: true, change_status: true, view_casework: true, escalate: true },
   };
   applyIncidentInput(key, inc, input);
   let notice = 'Incident logged.';
-  if (ctx.json.escalate) { inc.hq_report = { id: uuid(`hq:new:${Date.now()}`), status: 'open', created_at: now }; inc.permissions.escalate = false; notice = 'Incident logged and escalated to Hack Club HQ.'; }
+  if (ctx.json.escalate) { inc.hq_report = { id: uuid(`hq:new:${clockNow()}`), status: 'open', created_at: now }; inc.permissions.escalate = false; notice = 'Incident logged and escalated to Hack Club HQ.'; }
   state[key].incidents.push(inc);
   return [201, { incident: inc, notice }];
 });
@@ -1025,16 +1031,16 @@ route('PATCH', '/api/v1/events/:eventId/incidents/:id', async (ctx) => {
   const key = organiserEvent(ctx);
   const inc = findIncident(key, ctx.params.id);
   const changed = applyIncidentInput(key, inc, ctx.json.incident || {});
-  if (changed.length) inc.timeline.push({ type: 'change', id: uuid(`tl:upd:${Date.now()}`), action: 'updated', actor_name: USERS[ctx.user].name, fields: changed, created_at: nowIso() });
+  if (changed.length) inc.timeline.push({ type: 'change', id: uuid(`tl:upd:${clockNow()}`), action: 'updated', actor_name: USERS[ctx.user].name, fields: changed, created_at: nowIso() });
   return [200, { incident: inc, notice: 'Incident updated.' }];
 });
 route('POST', '/api/v1/events/:eventId/incidents/:id/escalate', async (ctx) => {
   const key = organiserEvent(ctx);
   const inc = findIncident(key, ctx.params.id);
   if (inc.hq_report) return [422, { error: 'This incident has already been escalated' }];
-  inc.hq_report = { id: uuid(`hq:esc:${Date.now()}`), status: 'open', created_at: nowIso() };
+  inc.hq_report = { id: uuid(`hq:esc:${clockNow()}`), status: 'open', created_at: nowIso() };
   inc.permissions.escalate = false;
-  inc.timeline.push({ type: 'comment', id: uuid(`tl:esc:${Date.now()}`), body: `Escalated to Hack Club HQ${ctx.json.escalation?.emergency_services_called ? ' (emergency services called)' : ''}.`, new_status: null, author_name: USERS[ctx.user].name, source: 'app', slack_url: null, created_at: nowIso() });
+  inc.timeline.push({ type: 'comment', id: uuid(`tl:esc:${clockNow()}`), body: `Escalated to Hack Club HQ${ctx.json.escalation?.emergency_services_called ? ' (emergency services called)' : ''}.`, new_status: null, author_name: USERS[ctx.user].name, source: 'app', slack_url: null, created_at: nowIso() });
   return [200, { incident: inc, notice: 'Escalated to Hack Club HQ. Someone will call you shortly.' }];
 });
 route('POST', '/api/v1/events/:eventId/incidents/:id/comments', async (ctx) => {
@@ -1043,7 +1049,7 @@ route('POST', '/api/v1/events/:eventId/incidents/:id/comments', async (ctx) => {
   const c = ctx.json.comment || {};
   const newStatus = c.new_status || null;
   if (!String(c.body || '').trim() && !newStatus) return [422, { error: 'Comment can\'t be blank' }];
-  inc.timeline.push({ type: 'comment', id: uuid(`tl:c:${Date.now()}:${Math.random()}`), body: c.body || '', new_status: newStatus, author_name: USERS[ctx.user].name, source: 'app', slack_url: null, created_at: nowIso() });
+  inc.timeline.push({ type: 'comment', id: uuid(`tl:c:${clockNow()}:${Math.random()}`), body: c.body || '', new_status: newStatus, author_name: USERS[ctx.user].name, source: 'app', slack_url: null, created_at: nowIso() });
   if (newStatus && newStatus !== inc.status) inc.status = newStatus;
   return [201, { incident_status: inc.status }];
 });
@@ -1077,11 +1083,11 @@ route('GET', '/api/v1/events/:eventId/messages/:id', async (ctx) => {
 function applyMessageInput(m, input) {
   for (const f of ['subject', 'body', 'audience', 'channels', 'participant_event_ids', 'group_ids', 'scheduled_at']) if (input[f] !== undefined) m[f] = input[f];
   if (m.subject === '') m.subject = null;
-  m.status = m.scheduled_at && new Date(m.scheduled_at) > new Date() ? 'scheduled' : 'draft';
+  m.status = m.scheduled_at && new Date(m.scheduled_at) > new Date(clockNow()) ? 'scheduled' : 'draft';
 }
 route('POST', '/api/v1/events/:eventId/messages', async (ctx) => {
   const key = organiserEvent(ctx);
-  const m = { id: uuid(`msg:new:${Date.now()}:${Math.random()}`), subject: null, status: 'draft', audience: 'confirmed_attendees', channels: ['email'], scheduled_at: null, sent_at: null, created_at: nowIso(), sent_by: null, body: '', participant_event_ids: [], group_ids: [], new_recipient_count: 0 };
+  const m = { id: uuid(`msg:new:${clockNow()}:${Math.random()}`), subject: null, status: 'draft', audience: 'confirmed_attendees', channels: ['email'], scheduled_at: null, sent_at: null, created_at: nowIso(), sent_by: null, body: '', participant_event_ids: [], group_ids: [], new_recipient_count: 0 };
   applyMessageInput(m, ctx.json.message || {});
   refreshMessage(key, m);
   state[key].messages.push(m);
@@ -1113,7 +1119,7 @@ route('GET', '/api/v1/events/:eventId/messages/:id/preview', async (ctx) => {
     slack_text: m.channels.includes('slack') ? `*${m.subject || EVENTS[key].name}*\n${m.body}` : null,
     email_subject: m.channels.includes('email') ? (m.subject || `Update from ${EVENTS[key].name}`) : null,
     body_html: m.body_html, sms_text: m.channels.includes('sms') ? sms : null, sms_length: sms.length, sms_segments: Math.max(1, Math.ceil(sms.length / 153)),
-    scheduled_at: m.scheduled_at, scheduled_in_future: !!(m.scheduled_at && new Date(m.scheduled_at) > new Date()),
+    scheduled_at: m.scheduled_at, scheduled_in_future: !!(m.scheduled_at && new Date(m.scheduled_at) > new Date(clockNow())),
   } }];
 });
 route('POST', '/api/v1/events/:eventId/messages/:id/:action', async (ctx) => {
@@ -1157,7 +1163,7 @@ route('GET', '/api/v1/incident_reports/options', async (ctx) => {
   const attending = SELF[ctx.user].map((x) => x.key);
   const organising = Object.keys(ORGANISER[ctx.user]);
   const keys = [...new Set([...organising, ...attending])];
-  const now = Date.now();
+  const now = clockNow();
   const live = (k) => new Date(EVENTS[k].starts_at).getTime() - 86400000 < now && now < new Date(EVENTS[k].ends_at).getTime() + 86400000;
   return [200, {
     roles: [{ value: 'participant', label: 'Participant' }, { value: 'parent_guardian', label: 'Parent or guardian' }, { value: 'volunteer', label: 'Volunteer' }, { value: 'organiser', label: 'Organiser' }, { value: 'other', label: 'Someone else' }],
@@ -1172,7 +1178,7 @@ route('GET', '/api/v1/incident_reports/options', async (ctx) => {
 });
 route('POST', '/api/v1/incident_reports', async (ctx) => {
   const priority = multipartField(ctx.raw, 'incident_report[priority]') || ctx.json?.incident_report?.priority || 's2';
-  return [201, { incident_report: { id: uuid(`report:${Date.now()}:${Math.random()}`), priority } }];
+  return [201, { incident_report: { id: uuid(`report:${clockNow()}:${Math.random()}`), priority } }];
 });
 
 // ---------------------------------------------------------------- server
