@@ -72,7 +72,7 @@ platform is skipped there and noted.
 | 31-scan-more-menu | Scan overflow menu |
 | 32-scan-search | Find an attendee, empty |
 | 33-scan-search-results | Type `ar` |
-| 34-scan-result | Pick **Arjun Ryan** from the results (not necessarily first): result card. This checks him in. Leave the card up. |
+| 34-scan-result | Pick **Arjun Ryan** from the results (not necessarily first): result card. He is already checked in, so the counts stay at 28 of 38. Leave the card up. |
 | 35-scan-participant-sheet | Open their details and unlock (PIN 1234 / Face ID): the participant sheet |
 | 36b-locked | Background the app so it locks again, open details again and cancel the unlock: the locked view |
 | 50-people | People tab |
