@@ -66,25 +66,25 @@ platform is skipped there and noted.
 | 25-message-edit-2 | Same, scrolled |
 | 26-message-preview | Continue to Preview & send. Don't send. |
 | 27-message-preview-2 | Same, scrolled. Then back out without saving. |
-| 28-scan | Scan tab, no context chosen |
+| 28-scan | Scan tab, no context chosen. Grant camera access first (Android: `pm grant`; iOS: allow the prompt before shooting) |
 | 29-scan-context-picker | Context picker open |
 | 30-scan-ready | Context "Check-in" chosen, camera ready |
 | 31-scan-more-menu | Scan overflow menu |
 | 32-scan-search | Find an attendee, empty |
 | 33-scan-search-results | Type `ar` |
-| 34-scan-result | Pick the first result: result card. (This scans them.) |
+| 34-scan-result | Pick the first result (Zoe Edwards, already checked in): result card. Leave the card up. |
 | 35-scan-participant-sheet | Open their details and unlock (PIN 1234 / Face ID): the participant sheet |
-| 36b-locked | Open details again and cancel the unlock: the locked view |
+| 36b-locked | Background the app so it locks again, open details again and cancel the unlock: the locked view |
 | 50-people | People tab |
 | 51-people-filter | Filter and sort sheet |
 | 52-people-filter-2 | Same, scrolled |
-| 53-people-attention | Needs-attention quick filter applied |
+| 53-people-attention | Needs-attention quick filter applied. Leave it on; 65/65b show it too. |
 | 54-travel | Travel tab |
 | 55-travel-scrolled | Travel scrolled |
 | 56-travel-person | Tap the first person on Travel |
 | 57-participant-1..4 | Participant detail for that person, scrolled through in four shots |
 | 60-account | Account sheet |
-| 61-account-2 | Account scrolled (skip if it all fits) |
+| 61-account-2 | Account scrolled. Skipped on Android because the sheet fits. |
 | 62-account-dark | In-app Appearance → Dark |
 | 63-overview-dark | Overview, top |
 | 64-overview-dark-2 | Overview scrolled (status bar scrim) |
@@ -120,11 +120,11 @@ platform is skipped there and noted.
 | File | What |
 |---|---|
 | 90-switcher-overlay | Event switcher opened over Harbourhack's tabs |
-| 91-kiosk-setup | Scan → overflow → Kiosk mode setup |
+| 91-kiosk-setup | Scan: choose context Check-in (it reset at sign-in), then overflow → Kiosk mode setup |
 | 92-kiosk-pin | Set PIN: enter `1234` |
 | 93-kiosk-pin-confirm | Confirm PIN: `1234` |
-| 94-kiosk | Kiosk screen |
-| 95-kiosk-idle | Kiosk after going idle |
+| 94-kiosk | Kiosk screen (Android also shows its "App is pinned" dialog here) |
+| 95-kiosk-idle | Kiosk about a minute later, with any system dialog dismissed (there's no separate idle state) |
 | 96-kiosk-unlock | Exit kiosk: the PIN pad |
 
 Platform-only extras go after 96 (for example `97-ios-verify-id`).
