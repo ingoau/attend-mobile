@@ -100,7 +100,7 @@ platform is skipped there and noted.
 
 | File | What |
 |---|---|
-| 70-participant-home | My tickets |
+| 70-participant-home | Home after sign-in: the "Choose an event" switcher (it replaced the old My tickets list) |
 | 72-ticket | The live/upcoming ticket's pass |
 | 73-ticket-2 | Same, scrolled |
 | 74-ticket-3 | Same, scrolled to the end |
@@ -111,7 +111,7 @@ platform is skipped there and noted.
 | 79-report-2 | Same, scrolled |
 | 79b-report-3 | Same, scrolled to the end. Back out and discard. |
 | 80-ticket-registering | The ticket still in registration |
-| 81-participant-home-past | My tickets scrolled to past events |
+| 81-participant-home-past | The event switcher opened from a ticket, showing Past (scroll if it isn't visible) |
 | 82-ticket-past | The past ticket |
 | 83-participant-account | Account. Sign out. |
 
@@ -127,4 +127,12 @@ platform is skipped there and noted.
 | 95-kiosk-idle | Kiosk about a minute later, with any system dialog dismissed (there's no separate idle state) |
 | 96-kiosk-unlock | Exit kiosk: the PIN pad |
 
-Platform-only extras go after 96 (for example `97-ios-verify-id`).
+### Extras (both platforms)
+
+| File | What |
+|---|---|
+| 97-offline-toast | Exit kiosk. Make the device offline (Android: airplane mode; iOS Simulator: Network Link Conditioner "100% Loss", or skip), then pull to refresh a list: the "You're offline" toast above the tab bar. Back online afterwards. |
+| 98-reselect-before | People or Travel scrolled well down |
+| 98-reselect-after | After tapping that tab's icon again: back at the top |
+
+Platform-only extras go after 98 (for example `99-ios-verify-id`).
