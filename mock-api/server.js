@@ -54,6 +54,17 @@ const shortCode = (seed) => {
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const toHtml = (text) => String(text || '').split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('');
 const previewText = (text) => String(text || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+// Broadcast bodies are HTML, as the real server stores them (the web editor
+// writes HTML). Seeds are written as text: paragraphs, and "1. " / "- " lines
+// as lists.
+const seedHtml = (text) => String(text || '').split(/\n{2,}/).map((p) => {
+  const lines = p.split('\n');
+  const list = lines.every((l) => /^\d+\. /.test(l)) ? 'ol' : lines.every((l) => /^- /.test(l)) ? 'ul' : null;
+  if (list) return `<${list}>${lines.map((l) => `<li>${escapeHtml(l.replace(/^(\d+\.|-) /, ''))}</li>`).join('')}</${list}>`;
+  return `<p>${lines.map(escapeHtml).join('<br>')}</p>`;
+}).join('');
+const htmlText = (html) => String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|li)>/gi, '\n').replace(/<[^>]+>/g, '')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 
 // ---------------------------------------------------------------- users
 const USERS = {
@@ -625,8 +636,8 @@ function refreshMessage(key, msg) {
   msg.pending_count = msg.recipients.filter((r) => !r.deliveries.some((d) => d.status === 'failed') && r.deliveries.some((d) => d.status === 'pending' || d.status === 'sending')).length;
   msg.sent_count = msg.recipient_count - msg.failed_count - msg.pending_count;
   msg.opened_count = msg.channels.includes('email') ? any((d) => d.read_at) : null;
-  msg.body_html = toHtml(msg.body);
-  msg.preview_text = previewText(msg.body);
+  msg.body_html = msg.body;
+  msg.preview_text = previewText(htmlText(msg.body));
   const editable = msg.status === 'draft' || msg.status === 'scheduled';
   msg.permissions = {
     edit: editable, send_now: editable, destroy: msg.status === 'draft' || msg.status === 'cancelled', cancel: msg.status === 'scheduled',
@@ -638,7 +649,7 @@ function makeMessage(key, n, d) {
   const msg = {
     id: uuid(`msg:${key}:${n}`), subject: d.subject, status: d.status, audience: d.audience, channels: d.channels,
     scheduled_at: d.scheduled_at || null, sent_at: d.sent_at || null, created_at: d.created_at, sent_by: d.sent_by || null,
-    body: d.body, participant_event_ids: d.participant_event_ids || [], group_ids: d.group_ids || [], new_recipient_count: d.new_recipient_count || 0,
+    body: seedHtml(d.body), participant_event_ids: d.participant_event_ids || [], group_ids: d.group_ids || [], new_recipient_count: d.new_recipient_count || 0,
   };
   return refreshMessage(key, msg);
 }
@@ -1111,12 +1122,12 @@ route('GET', '/api/v1/events/:eventId/messages/:id/preview', async (ctx) => {
   const key = organiserEvent(ctx);
   const m = findMessage(key, ctx.params.id);
   const names = m.recipients.map((r) => r.name);
-  const sms = `${EVENTS[key].name}: ${m.subject ? m.subject + ' - ' : ''}${m.body.replace(/\s+/g, ' ')}`;
+  const sms = `${EVENTS[key].name}: ${m.subject ? m.subject + ' - ' : ''}${htmlText(m.body).replace(/\s+/g, ' ').trim()}`;
   const labels = { email: 'Email', slack: 'Slack', sms: 'SMS', push: 'Push' };
   return [200, { preview: {
     total_count: names.length, recipient_names: names.slice(0, 25), audience_label: m.audience_label,
     channel_labels: m.channels.map((c) => labels[c] || c).join(', '), channels: m.channels,
-    slack_text: m.channels.includes('slack') ? `*${m.subject || EVENTS[key].name}*\n${m.body}` : null,
+    slack_text: m.channels.includes('slack') ? `*${m.subject || EVENTS[key].name}*\n${htmlText(m.body).trim()}` : null,
     email_subject: m.channels.includes('email') ? (m.subject || `Update from ${EVENTS[key].name}`) : null,
     body_html: m.body_html, sms_text: m.channels.includes('sms') ? sms : null, sms_length: sms.length, sms_segments: Math.max(1, Math.ceil(sms.length / 153)),
     scheduled_at: m.scheduled_at, scheduled_in_future: !!(m.scheduled_at && new Date(m.scheduled_at) > new Date(clockNow())),
